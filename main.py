@@ -28,25 +28,25 @@ form = """
 <form method="post">
     <label>
         Userame
-        <input name="Username">%(params.error_username)s<br>
+        <input name="Username" value="%(username)s" style="margin-right:1em;">%(error_username)s<br>
         <br>
     </label>
 
     <label>
         Password
-        <input name="Password"><br>
+        <input name="Password" type="password" style="margin-right:1em;">%(error_password)s<br>
         <br>
     </label>
 
     <label>
         Verify
-        <input name="Verify"><br>
+        <input name="Verify" type="password" style="margin-right:1em;">%(error_verify)s<br>
         <br>
     </label>
 
     <label>
         Email
-        <input name="Email"><br>
+        <input name="Email" value="%(email)s" style="margin-right:1em;">%(error_email)s<br>
         <br>
     </label>
 
@@ -57,27 +57,31 @@ form = """
 
 class MainHandler(webapp2.RequestHandler):
     def get(self):
-        self.response.out.write(form)
+        params = {
+            'error_verify':'',
+            'error_username':'',
+            'error_password':'',
+            'error_email':'',
+            'email':'',
+            'username':'',
+        }
+        self.response.out.write(form % params)
 
     def validate_username(self, Username):
         USERNAME_RE = re.compile(r"^[a-zA-Z0-9_-]{3,20}$")
-        if USERNAME_RE.match(Username):
-            return Username
+        return Username and USERNAME_RE.match(Username)
+
 
     def validate_email(self, Email):
        # allow empty email field
-        if not Email:
-           return ""
-
         EMAIL_RE = re.compile(r"^[\S]+@[\S]+.[\S]+$")
-        if EMAIL_RE.match(Email):
-           return Email
+        return Email and EMAIL_RE.match(Email)
+
 
     def validate_password(self, Password):
         PWD_RE = re.compile(r"^.{3,20}$")
-        if PWD_RE.match(Password):
-            return True
-        return False
+        return Password and PWD_RE.match(Password)
+
 
 
 
@@ -88,33 +92,41 @@ class MainHandler(webapp2.RequestHandler):
 #    self.render("user-signup.html")
 
     def post(self):
+
         have_error = False
         username = self.request.get('Username')
         password = self.request.get('Password')
         verify = self.request.get('Verify')
         email = self.request.get('Email')
 
-        params = dict(username = username,
-                      email = email)
+        params = {
+            'error_username':'',
+            'error_password':'',
+            'error_verify':'',
+            'error_email':'',
+            'email':email,
+            'username':username,
+        }
 
+#
         if not self.validate_username(username):
-            params['error_username'] = "That's not a valid username."
+            params['error_username'] = (username != "") and "That's not a valid username." or "Field cannot be empty."
             have_error = True
 
         if not self.validate_password(password):
-            params['error_password'] = "That wasn't a valid password."
+            params['error_password'] = (password != "") and "That wasn't a valid password." or "Field cannot be empty."
             have_error = True
-        elif password != verify:
+
+        if password != verify:
             params['error_verify'] = "Your passwords didn't match."
             have_error = True
 
         if not self.validate_email(email):
-            params['error_email'] = "That's not a valid email."
+            params['error_email'] = (email != "") and "That's not a valid email." or "Field cannot be empty."
             have_error = True
 
-
         if have_error == True:
-            self.response.out.write(form.format({"params":params}))
+            self.response.out.write(form % params)
         else:
             self.redirect('/welcome?Username=' + username)
 
